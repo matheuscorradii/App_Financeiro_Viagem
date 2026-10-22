@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f766e">
+<link rel="manifest" href="manifest.json">
+<title>Viagem Contas</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, sans-serif; background: #f1f5f9; color: #0f172a; padding-bottom: 70px; }
+  header { background: #0f766e; color: #fff; padding: 14px 16px; font-size: 18px; font-weight: 600; }
+  main { padding: 12px 16px; max-width: 600px; margin: 0 auto; }
+  .card { background: #fff; border-radius: 12px; padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 2px #0001; }
+  h2 { font-size: 16px; margin: 0 0 10px; }
+  label { display: block; font-size: 13px; color: #475569; margin: 8px 0 4px; }
+  input, select { width: 100%; padding: 10px; font-size: 16px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
+  button { padding: 10px 14px; font-size: 15px; border: 0; border-radius: 8px; background: #0f766e; color: #fff; }
+  button.sec { background: #e2e8f0; color: #0f172a; }
+  button.del { background: none; color: #dc2626; padding: 4px 8px; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .row > * { flex: 1; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chips label { display: flex; align-items: center; gap: 6px; margin: 0; padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 20px; font-size: 14px; color: #0f172a; }
+  .chips input { width: auto; }
+  .item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #e2e8f0; }
+  .item:last-child { border: 0; }
+  .muted { color: #64748b; font-size: 13px; }
+  .pos { color: #15803d; font-weight: 600; }
+  .neg { color: #dc2626; font-weight: 600; }
+  .big { font-size: 28px; font-weight: 700; }
+  nav { position: fixed; bottom: 0; left: 0; right: 0; display: flex; background: #fff; border-top: 1px solid #e2e8f0; }
+  nav button { flex: 1; background: none; color: #64748b; border-radius: 0; padding: 12px 4px; font-size: 13px; }
+  nav button.on { color: #0f766e; font-weight: 700; }
+  .tab { display: none; }
+  .tab.on { display: block; }
+</style>
+</head>
+<body>
+<header>✈️ Contas da Viagem</header>
+<main>
+
+<!-- RESUMO / ACERTO -->
+<section class="tab on" id="t-resumo">
+  <div class="card"><h2>Saldo de cada um</h2><div id="saldos"></div></div>
+  <div class="card"><h2>Quem deve a quem</h2><div id="sugestoes"></div></div>
+  <div class="card"><h2>Pagamentos de acerto feitos</h2><div id="acertos"></div></div>
+</section>
+
+<!-- GASTOS -->
+<section class="tab" id="t-gastos">
+  <div class="card">
+    <h2>Novo gasto</h2>
+    <label>Descrição</label><input id="g-desc" placeholder="Ex.: Hotel, Uber, Ingresso">
+    <div class="row">
+      <div><label>Valor (R$)</label><input id="g-valor" type="number" step="0.01" inputmode="decimal"></div>
+      <div><label>Data</label><input id="g-data" type="date"></div>
+    </div>
+    <label>Quem pagou</label><select id="g-pagou"></select>
+    <label>Dividir entre</label><div class="chips" id="g-part"></div>
+    <p><button onclick="addGasto()">Adicionar gasto</button></p>
+  </div>
+  <div class="card"><h2>Gastos</h2><div id="lista-gastos"></div></div>
+</section>
+
+<!-- CAIXINHA -->
+<section class="tab" id="t-caixa">
+  <div class="card">
+    <h2>Caixinha Pix (alimentação)</h2>
+    <div class="muted">Saldo restante</div>
+    <div class="big" id="cx-saldo"></div>
+    <div class="muted" id="cx-info"></div>
+    <label>Valor inicial da caixinha (R$)</label>
+    <div class="row"><input id="cx-inicial" type="number" step="0.01" inputmode="decimal"><button onclick="setInicial()" style="flex:0">Salvar</button></div>
+  </div>
+  <div class="card">
+    <h2>Gastar da caixinha</h2>
+    <label>Descrição</label><input id="c-desc" placeholder="Ex.: Almoço">
+    <div class="row">
+      <div><label>Valor (R$)</label><input id="c-valor" type="number" step="0.01" inputmode="decimal"></div>
+      <div><label>Data</label><input id="c-data" type="date"></div>
+    </div>
+    <p><button onclick="addCaixa()">Abater da caixinha</button></p>
+  </div>
+  <div class="card"><h2>Gastos da caixinha</h2><div id="lista-caixa"></div></div>
+</section>
+
+<!-- PESSOAS -->
+<section class="tab" id="t-pessoas">
+  <div class="card">
+    <h2>Pessoas</h2>
+    <div class="row"><input id="p-nome" placeholder="Nome"><button onclick="addPessoa()" style="flex:0">Adicionar</button></div>
+    <div id="lista-pessoas"></div>
+  </div>
+  <div class="card">
+    <h2>Registrar acerto (pagamento entre pessoas)</h2>
+    <div class="row">
+      <div><label>Quem pagou</label><select id="a-de"></select></div>
+      <div><label>Para quem</label><select id="a-para"></select></div>
+    </div>
+    <div class="row">
+      <div><label>Valor (R$)</label><input id="a-valor" type="number" step="0.01" inputmode="decimal"></div>
+      <div><label>Data</label><input id="a-data" type="date"></div>
+    </div>
+    <p><button onclick="addAcerto()">Registrar acerto</button></p>
+  </div>
+  <div class="card">
+    <h2>Backup</h2>
+    <p class="muted">Os dados ficam só neste celular. Exporte de vez em quando.</p>
+    <div class="row">
+      <button class="sec" onclick="exportar()">Exportar</button>
+      <button class="sec" onclick="document.getElementById('imp').click()">Importar</button>
+    </div>
+    <input type="file" id="imp" accept=".json" style="display:none" onchange="importar(this)">
+  </div>
+</section>
+
+</main>
+<nav>
+  <button class="on" data-t="resumo">📊 Resumo</button>
+  <button data-t="gastos">🧾 Gastos</button>
+  <button data-t="caixa">💰 Caixinha</button>
+  <button data-t="pessoas">👥 Pessoas</button>
+</nav>
+
+<script>
+const KEY = 'viagem-contas';
+let db = JSON.parse(localStorage.getItem(KEY) || 'null') ||
+  { pessoas: [], gastos: [], caixaInicial: 0, caixa: [], acertos: [] };
+
+const $ = id => document.getElementById(id);
+const brl = c => (c / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const cents = v => Math.round(parseFloat(String(v).replace(',', '.')) * 100);
+const hoje = () => new Date().toISOString().slice(0, 10);
+const dataBR = d => d.split('-').reverse().join('/');
+const nome = id => (db.pessoas.find(p => p.id === id) || { nome: '?' }).nome;
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const salvar = () => { localStorage.setItem(KEY, JSON.stringify(db)); render(); };
+
+// Saldo > 0: tem a receber. Saldo < 0: deve.
+function saldos() {
+  const s = {};
+  db.pessoas.forEach(p => s[p.id] = 0);
+  db.gastos.forEach(g => {
+    const n = g.part.length, base = Math.floor(g.valor / n);
+    s[g.pagou] = (s[g.pagou] || 0) + g.valor;
+    // centavos que sobram vão para os primeiros participantes
+    g.part.forEach((id, i) => s[id] = (s[id] || 0) - base - (i < g.valor - base * n ? 1 : 0));
+  });
+  db.acertos.forEach(a => { s[a.de] += a.valor; s[a.para] -= a.valor; });
+  return s;
+}
+
+function sugestoes(s) {
+  const dev = [], rec = [];
+  for (const id in s) {
+    if (s[id] < 0) dev.push({ id, v: -s[id] });
+    if (s[id] > 0) rec.push({ id, v: s[id] });
+  }
+  dev.sort((a, b) => b.v - a.v); rec.sort((a, b) => b.v - a.v);
+  const out = [];
+  let i = 0, j = 0;
+  while (i < dev.length && j < rec.length) {
+    const v = Math.min(dev[i].v, rec[j].v);
+    out.push({ de: dev[i].id, para: rec[j].id, valor: v });
+    dev[i].v -= v; rec[j].v -= v;
+    if (!dev[i].v) i++;
+    if (!rec[j].v) j++;
+  }
+  return out;
+}
+
+function render() {
+  const opts = db.pessoas.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+  ['g-pagou', 'a-de', 'a-para'].forEach(id => { const v = $(id).value; $(id).innerHTML = opts; if (v) $(id).value = v; });
+  $('g-part').innerHTML = db.pessoas.map(p =>
+    `<label><input type="checkbox" value="${p.id}" checked>${p.nome}</label>`).join('') || '<span class="muted">Cadastre pessoas primeiro</span>';
+
+  const s = saldos();
+  $('saldos').innerHTML = db.pessoas.map(p => `<div class="item"><span>${p.nome}</span>
+    <span class="${s[p.id] < 0 ? 'neg' : 'pos'}">${s[p.id] < 0 ? 'deve ' : s[p.id] > 0 ? 'recebe ' : ''}${brl(Math.abs(s[p.id]))}</span></div>`).join('')
+    || '<span class="muted">Cadastre as pessoas na aba Pessoas</span>';
+
+  $('sugestoes').innerHTML = sugestoes(s).map(t => `<div class="item">
+    <span><b>${nome(t.de)}</b> paga <b>${nome(t.para)}</b><br><span class="neg">${brl(t.valor)}</span></span>
+    <button class="sec" onclick="quitar('${t.de}','${t.para}',${t.valor})">Marcar pago</button></div>`).join('')
+    || '<span class="muted">Tudo acertado 🎉</span>';
+
+  $('acertos').innerHTML = db.acertos.slice().reverse().map(a => `<div class="item">
+    <span>${nome(a.de)} → ${nome(a.para)}<br><span class="muted">${dataBR(a.data)}</span></span>
+    <span>${brl(a.valor)} <button class="del" onclick="del('acertos','${a.id}')">✕</button></span></div>`).join('')
+    || '<span class="muted">Nenhum</span>';
+
+  $('lista-gastos').innerHTML = db.gastos.slice().reverse().map(g => `<div class="item">
+    <span>${g.desc}<br><span class="muted">${dataBR(g.data)} · pagou ${nome(g.pagou)} · ${g.part.length === db.pessoas.length ? 'todos' : g.part.map(nome).join(', ')}</span></span>
+    <span>${brl(g.valor)} <button class="del" onclick="del('gastos','${g.id}')">✕</button></span></div>`).join('')
+    || '<span class="muted">Nenhum gasto</span>';
+
+  const gastoCx = db.caixa.reduce((t, c) => t + c.valor, 0);
+  const saldoCx = db.caixaInicial - gastoCx;
+  $('cx-saldo').textContent = brl(saldoCx);
+  $('cx-saldo').className = 'big ' + (saldoCx < 0 ? 'neg' : 'pos');
+  $('cx-info').textContent = `Inicial ${brl(db.caixaInicial)} · gasto ${brl(gastoCx)}`;
+  $('lista-caixa').innerHTML = db.caixa.slice().reverse().map(c => `<div class="item">
+    <span>${c.desc}<br><span class="muted">${dataBR(c.data)}</span></span>
+    <span>${brl(c.valor)} <button class="del" onclick="del('caixa','${c.id}')">✕</button></span></div>`).join('')
+    || '<span class="muted">Nenhum gasto</span>';
+
+  $('lista-pessoas').innerHTML = db.pessoas.map(p => `<div class="item"><span>${p.nome}</span>
+    <button class="del" onclick="delPessoa('${p.id}')">✕</button></div>`).join('');
+}
+
+function addPessoa() {
+  const n = $('p-nome').value.trim();
+  if (!n) return;
+  db.pessoas.push({ id: uid(), nome: n });
+  $('p-nome').value = '';
+  salvar();
+}
+
+function delPessoa(id) {
+  const usada = db.gastos.some(g => g.pagou === id || g.part.includes(id)) || db.acertos.some(a => a.de === id || a.para === id);
+  if (usada) return alert('Essa pessoa já tem gastos ou acertos. Apague-os antes.');
+  db.pessoas = db.pessoas.filter(p => p.id !== id);
+  salvar();
+}
+
+function addGasto() {
+  const valor = cents($('g-valor').value);
+  const part = [...$('g-part').querySelectorAll('input:checked')].map(i => i.value);
+  if (!$('g-desc').value.trim() || !(valor > 0) || !$('g-pagou').value || !part.length)
+    return alert('Preencha descrição, valor, quem pagou e ao menos uma pessoa.');
+  db.gastos.push({ id: uid(), desc: $('g-desc').value.trim(), valor, data: $('g-data').value || hoje(), pagou: $('g-pagou').value, part });
+  $('g-desc').value = $('g-valor').value = '';
+  salvar();
+}
+
+function addCaixa() {
+  const valor = cents($('c-valor').value);
+  if (!$('c-desc').value.trim() || !(valor > 0)) return alert('Preencha descrição e valor.');
+  db.caixa.push({ id: uid(), desc: $('c-desc').value.trim(), valor, data: $('c-data').value || hoje() });
+  $('c-desc').value = $('c-valor').value = '';
+  salvar();
+}
+
+function setInicial() {
+  const v = cents($('cx-inicial').value);
+  if (!(v >= 0)) return;
+  db.caixaInicial = v;
+  salvar();
+}
+
+function addAcerto() {
+  const valor = cents($('a-valor').value), de = $('a-de').value, para = $('a-para').value;
+  if (!(valor > 0) || !de || de === para) return alert('Escolha duas pessoas diferentes e um valor.');
+  db.acertos.push({ id: uid(), de, para, valor, data: $('a-data').value || hoje() });
+  $('a-valor').value = '';
+  salvar();
+}
+
+function quitar(de, para, valor) {
+  if (!confirm(`Registrar que ${nome(de)} pagou ${brl(valor)} para ${nome(para)}?`)) return;
+  db.acertos.push({ id: uid(), de, para, valor, data: hoje() });
+  salvar();
+}
+
+function del(lista, id) {
+  if (!confirm('Apagar este item?')) return;
+  db[lista] = db[lista].filter(x => x.id !== id);
+  salvar();
+}
+
+function exportar() {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(db, null, 2)], { type: 'application/json' }));
+  a.download = `viagem-backup-${hoje()}.json`;
+  a.click();
+}
+
+function importar(input) {
+  const f = input.files[0];
+  if (!f || !confirm('Substituir os dados atuais pelo backup?')) return;
+  f.text().then(t => { db = JSON.parse(t); salvar(); alert('Backup importado.'); });
+}
+
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('nav button, .tab').forEach(x => x.classList.remove('on'));
+  b.classList.add('on');
+  $('t-' + b.dataset.t).classList.add('on');
+});
+
+['g-data', 'c-data', 'a-data'].forEach(id => $(id).value = hoje());
+$('cx-inicial').value = db.caixaInicial ? db.caixaInicial / 100 : '';
+render();
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+</script>
+</body>
+</html>
