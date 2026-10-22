@@ -29,15 +29,3 @@ App simples para dividir os gastos de uma viagem em grupo, no estilo do Splitwis
 | `manifest.json` | Nome, ícone e cores para instalar no celular |
 | `sw.js` | Guarda o app em cache para abrir offline |
 | `icon.svg` | Ícone do app |
-
-## Atualizar
-
-Depois de alterar os arquivos:
-
-```bash
-git add .
-git commit -m "Atualiza app"
-git push
-```
-
-O GitHub Pages publica em 1 a 2 minutos. Abra o app no celular com internet para ele pegar a versão nova.
