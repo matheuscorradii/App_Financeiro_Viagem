@@ -148,21 +148,21 @@ try { if (sessionStorage.getItem('rachai-sp')) document.documentElement.classLis
 
 <!-- VIAGENS -->
 <section class="tab" id="t-viagens">
-  <div class="hero small"><div class="wrap"><h1>Viagens</h1></div></div>
+  <div class="hero small"><div class="wrap"><h1>Grupos</h1></div></div>
   <div class="wrap">
-    <h3>Viagem atual</h3><div class="card pad" id="v-atual"></div>
-    <h3>Entrar numa viagem</h3>
-    <p class="hint">Recebeu um código? Digite aqui para ver e editar a mesma viagem.</p>
+    <h3>Grupo atual</h3><div class="card pad" id="v-atual"></div>
+    <h3>Entrar num grupo</h3>
+    <p class="hint">Recebeu um código? Digite aqui para ver e editar o mesmo grupo.</p>
     <div class="search">
       <div class="field"><input id="v-cod" placeholder="Código (ex.: K7P2XQ9M)" style="padding-left:14px;text-transform:uppercase" onkeydown="if(event.key==='Enter')entrarViagem()"></div>
-      <button class="round" onclick="entrarViagem()" aria-label="Entrar na viagem"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      <button class="round" onclick="entrarViagem()" aria-label="Entrar no grupo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
     </div>
-    <h3>Nova viagem</h3>
+    <h3>Novo grupo</h3>
     <div class="search">
-      <div class="field"><input id="v-nome" placeholder="Nome da nova viagem" style="padding-left:14px" onkeydown="if(event.key==='Enter')novaViagem()"></div>
-      <button class="round" onclick="novaViagem()" aria-label="Nova viagem"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      <div class="field"><input id="v-nome" placeholder="Nome do grupo (ex.: Casa, Viagem, Mercado)" style="padding-left:14px" onkeydown="if(event.key==='Enter')novaViagem()"></div>
+      <button class="round" onclick="novaViagem()" aria-label="Novo grupo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
     </div>
-    <h3>Minhas viagens</h3><div class="card" id="lista-viagens"></div>
+    <h3>Meus grupos</h3><div class="card" id="lista-viagens"></div>
   </div>
 </section>
 
@@ -190,7 +190,7 @@ try { if (sessionStorage.getItem('rachai-sp')) document.documentElement.classLis
       </div>
       <button class="round" onclick="addPessoa()" aria-label="Adicionar pessoa"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
     </div>
-    <h3>Grupo da viagem</h3><div class="card" id="lista-pessoas"></div>
+    <h3>Pessoas do grupo</h3><div class="card" id="lista-pessoas"></div>
   </div>
 </section>
 
@@ -210,7 +210,7 @@ try { if (sessionStorage.getItem('rachai-sp')) document.documentElement.classLis
     <div class="card"><div class="item" onclick="tutorial(0)" style="cursor:pointer"><div class="t"><b>Ver tutorial</b><span>O Carteirinha mostra cada tela do app</span></div><span class="chev">›</span></div></div>
     <h3>Organização</h3>
     <div class="card">
-      <div class="item" onclick="ir('viagens')" style="cursor:pointer"><div class="t"><b>Viagens</b><span>Criar, trocar e renomear viagens</span></div><span class="chev">›</span></div>
+      <div class="item" onclick="ir('viagens')" style="cursor:pointer"><div class="t"><b>Grupos</b><span>Criar, trocar e renomear grupos</span></div><span class="chev">›</span></div>
       <div class="item" onclick="ir('cats')" style="cursor:pointer"><div class="t"><b>Categorias</b><span>Criar e editar categorias de gasto</span></div><span class="chev">›</span></div>
     </div>
     <h3>Backup</h3>
@@ -244,7 +244,7 @@ const limpo = obj => JSON.parse(JSON.stringify(obj, (k, v) => typeof v === 'stri
 let store = limpo(JSON.parse(localStorage.getItem(STORE) || 'null'));
 if (!store) {
   const antigo = JSON.parse(localStorage.getItem(KEY) || 'null');
-  store = { atual: 'v1', viagens: { v1: { ...viagemVazia('Minha viagem'), ...antigo } } };
+  store = { atual: 'v1', viagens: { v1: { ...viagemVazia('Meu grupo'), ...antigo } } };
 }
 let db = store.viagens[store.atual];
 // migra versão antiga (valor inicial único) para movimentação de aporte
@@ -408,9 +408,9 @@ function render() {
   // Código fica oculto por padrão (o olho mostra/esconde) para quem está do lado não ver.
   const codTxt = verCod ? db.cod : '••••••••';
   const olho = `<button class="icon-btn" onclick="verCod = !verCod; render()" aria-label="${verCod ? 'Ocultar' : 'Mostrar'} código"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>${verCod ? '<path d="M3 3l18 18"/>' : ''}</svg></button>`;
-  if (db.cod) $('r-cod').innerHTML = `<div><div class="k">Código da viagem</div><div class="v">${codTxt} ${olho}</div></div>
+  if (db.cod) $('r-cod').innerHTML = `<div><div class="k">Código do grupo</div><div class="v">${codTxt} ${olho}</div></div>
     <button class="btn sm" onclick="compartilharCod('${db.cod}')">Compartilhar</button>`;
-  $('v-atual').innerHTML = `<b>${db.nome}</b><span class="hint">${db.cod ? 'Envie este código para quem vai dividir com você:' : 'Sem conexão: o código aparece quando a viagem for salva online.'}</span>
+  $('v-atual').innerHTML = `<b>${db.nome}</b><span class="hint">${db.cod ? 'Envie este código para quem vai dividir com você:' : 'Sem conexão: o código aparece quando o grupo for salvo online.'}</span>
     ${db.cod ? `<div class="cod-big">${codTxt} ${olho}</div><div class="row2"><button class="btn" onclick="compartilharCod('${db.cod}')">Compartilhar</button>
     <button class="btn ghost" onclick="navigator.clipboard.writeText('${db.cod}').then(() => avisar('Código copiado'))">Copiar</button></div>` : ''}`;
   $('lista-viagens').innerHTML = Object.entries(store.viagens).map(([id, v]) => `<div class="item">
@@ -481,7 +481,7 @@ const POSES = {
   preocupada:'<g transform="rotate(-6 100 50)"><rect x="70" y="22" width="72" height="46" rx="10" fill="#BAE6FD"/></g>' + BRACOS + FRENTE + '<circle cx="76" cy="98" r="18" fill="#F0FDFF"/><circle cx="124" cy="98" r="18" fill="#F0FDFF"/><circle cx="78" cy="104" r="8" fill="#082F49"/><circle cx="122" cy="104" r="8" fill="#082F49"/><path d="M58 80 L92 86" stroke="#F0FDFF" stroke-width="5" stroke-linecap="round"/><path d="M142 80 L108 86" stroke="#F0FDFF" stroke-width="5" stroke-linecap="round"/><path d="M86 134 Q100 122 114 134" fill="none" stroke="#082F49" stroke-width="5" stroke-linecap="round"/>'
 };
 const FASES = [
-  ['feliz', 'Divida os gastos da viagem sem dor de cabeça'],
+  ['feliz', 'Organize e divida seus gastos sem dor de cabeça'],
   ['pensativa', 'Igual para todos ou por valor: você escolhe'],
   ['preocupada', 'Veja na hora quem deve a quem'],
   ['comemorando', 'Acerte tudo e feche a conta!']
@@ -509,11 +509,11 @@ function fecharSplash() {
 // Tutorial: o Carteirinha passa por cada tela explicando. Na primeira vez ele só convida.
 const PASSOS = [
   ['resumo', 'feliz', 'Oi! Eu sou o Carteirinha. Aqui no Início você vê o total, o saldo de cada um e quem deve a quem.'],
-  ['pessoas', 'pensativa', 'Primeiro, cadastre aqui em Pessoas quem está na viagem.'],
+  ['pessoas', 'pensativa', 'Primeiro, cadastre aqui em Pessoas quem divide as contas com você.'],
   ['gastos', 'feliz', 'Toque no + verde para lançar um gasto: valor, quem pagou e entre quem dividir, igual ou por valor.'],
   ['acerto', 'preocupada', 'Em Acerto eu mostro quem deve a quem. Quando alguém pagar, é só tocar em Quitar.'],
   ['caixa', 'pensativa', 'A Caixinha guarda um valor pago em grupo, tipo um Pix para a comida. Ela fica fora da divisão.'],
-  ['viagens', 'feliz', 'Em Viagens você cria outras viagens e compartilha o código para dividir com quem está longe.'],
+  ['viagens', 'feliz', 'Em Grupos você separa as contas (casa, viagem, mercado...) e compartilha o código com quem divide com você.'],
   ['ajustes', 'comemorando', 'Nos Ajustes ficam o tema escuro, o backup e este tutorial. Pronto, bora rachar!']
 ];
 function falaTut(pose, msg, dots) {
@@ -743,7 +743,7 @@ function novaViagem() {
   const n = $('v-nome').value.trim();
   if (!n) return $('v-nome').focus();
   const v = viagemVazia(n);
-  if (db.pessoas.length && confirm('Usar as mesmas pessoas da viagem atual?')) v.pessoas = db.pessoas.map(p => ({ ...p }));
+  if (db.pessoas.length && confirm('Usar as mesmas pessoas do grupo atual?')) v.pessoas = db.pessoas.map(p => ({ ...p }));
   const id = uid();
   store.viagens[id] = v;
   $('v-nome').value = '';
@@ -760,15 +760,15 @@ function trocarViagem(id) {
 }
 
 function renomearViagem(id) {
-  const n = prompt('Nome da viagem', store.viagens[id].nome);
+  const n = prompt('Nome do grupo', store.viagens[id].nome);
   if (!n || !n.trim()) return;
   store.viagens[id].nome = n.trim();
   salvar();
 }
 
 function delViagem(id) {
-  if (Object.keys(store.viagens).length === 1) return alert('Precisa existir ao menos uma viagem.');
-  if (!confirm(`Apagar a viagem "${store.viagens[id].nome}" e todos os dados dela?`)) return;
+  if (Object.keys(store.viagens).length === 1) return alert('Precisa existir ao menos um grupo.');
+  if (!confirm(`Apagar o grupo "${store.viagens[id].nome}" e todos os dados dela?`)) return;
   delete store.viagens[id];
   if (id === store.atual) trocarViagem(Object.keys(store.viagens)[0]);
   else salvar();
@@ -821,16 +821,16 @@ function entrarViagem(link) {
   const ja = Object.entries(store.viagens).find(([, v]) => v.cod === cod);
   if (ja) return trocarViagem(ja[0]);
   rpc('get_viagem', { p_cod: cod }).then(d => {
-    if (!d) return alert('Nenhuma viagem com esse código.');
+    if (!d) return alert('Nenhum grupo com esse código.');
     const id = uid();
-    store.viagens[id] = { ...viagemVazia('Viagem'), ...d, cod };
+    store.viagens[id] = { ...viagemVazia('Grupo'), ...d, cod };
     $('v-cod').value = '';
     trocarViagem(id);
-    avisar('Você entrou na viagem');
+    avisar('Você entrou no grupo');
   }).catch(() => alert('Sem conexão. Tente de novo.'));
 }
 function compartilharCod(cod) {
-  const txt = `Entre na viagem "${db.nome}" no Rachaí: https://matheuscorradii.github.io/App_Financeiro_Viagem/?entrar=${cod}`;
+  const txt = `Entre no grupo "${db.nome}" no Rachaí: https://matheuscorradii.github.io/App_Financeiro_Viagem/?entrar=${cod}`;
   window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(txt));
 }
 document.addEventListener('visibilitychange', puxar);
