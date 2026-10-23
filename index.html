@@ -70,7 +70,7 @@
   <div class="hero small"><div class="wrap"><h1 id="g-titulo">Novo gasto</h1></div></div>
   <div class="wrap two">
     <div class="card pad overlap" id="g-card">
-      <label style="margin-top:0">Valor</label><input id="g-valor" class="valor" type="number" step="0.01" inputmode="decimal" placeholder="R$ 0,00" oninput="falta()">
+      <label style="margin-top:0">Valor</label><input id="g-valor" class="valor" type="text" inputmode="numeric" data-money placeholder="0,00" oninput="falta()">
       <label>Descrição</label><input id="g-desc" placeholder="Hotel, Uber, ingresso...">
       <label class="lbl-link">Categoria <a onclick="ir('cats')">Editar</a></label><div class="chips" id="g-cat"></div>
       <div class="row">
@@ -103,7 +103,7 @@
         <div><label style="margin-top:0">Para quem</label><select id="a-para"></select></div>
       </div>
       <div class="row">
-        <div><label>Valor</label><input id="a-valor" type="number" step="0.01" inputmode="decimal" placeholder="R$ 0,00"></div>
+        <div><label>Valor</label><input id="a-valor" type="text" inputmode="numeric" data-money placeholder="0,00"></div>
         <div><label>Data</label><input id="a-data" type="date"></div>
       </div>
       <button class="btn" onclick="addAcerto()">Registrar acerto</button>
@@ -124,7 +124,7 @@
   </div></div>
   <div class="wrap two">
     <div class="card pad overlap" id="c-card">
-      <label style="margin-top:0">Adicionar valor</label><input id="c-valor" class="valor" type="number" step="0.01" inputmode="decimal" placeholder="R$ 0,00">
+      <label style="margin-top:0">Adicionar valor</label><input id="c-valor" class="valor" type="text" inputmode="numeric" data-money placeholder="0,00">
       <div class="row">
         <div><label>Descrição</label><input id="c-desc" placeholder="Pix da Ana..."></div>
         <div><label>Data</label><input id="c-data" type="date"></div>
@@ -144,6 +144,10 @@
     <div class="search" style="margin-top:16px">
       <div class="field"><input id="v-nome" placeholder="Nome da nova viagem" style="padding-left:14px" onkeydown="if(event.key==='Enter')novaViagem()"></div>
       <button class="round" onclick="novaViagem()" aria-label="Nova viagem"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+    </div>
+    <div class="search">
+      <div class="field"><input id="v-cod" placeholder="Entrar com código (ex.: K7P2XQ9M)" style="padding-left:14px;text-transform:uppercase" onkeydown="if(event.key==='Enter')entrarViagem()"></div>
+      <button class="round" onclick="entrarViagem()" aria-label="Entrar na viagem"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
     </div>
     <h3>Minhas viagens</h3><div class="card" id="lista-viagens"></div>
   </div>
@@ -183,9 +187,10 @@
   <div class="wrap">
     <h3>Aparência</h3>
     <div class="card pad">
-      <div class="seg" style="margin:0">
-        <label><input type="radio" name="tema" value="light" onchange="setTema(this.value)">Claro</label>
-        <label><input type="radio" name="tema" value="dark" onchange="setTema(this.value)">Escuro</label>
+      <div class="row-tema"><span>Tema escuro</span>
+        <button id="tema-sw" class="sw" role="switch" aria-label="Tema escuro" onclick="setTema(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark')">
+          <span class="knob"><svg class="sol" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><svg class="lua" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></span>
+        </button>
       </div>
     </div>
     <h3>Organização</h3>
@@ -213,12 +218,15 @@
   <button data-t="pessoas" aria-label="Pessoas"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5"/><circle cx="17" cy="9" r="2.5"/><path d="M16 15c3 0 5 1.5 5 4"/></svg></button>
 </div></nav>
 
+<div id="toast"></div>
 <script>
 const KEY = 'viagem-contas';
 const STORE = 'rachai';
 const viagemVazia = nome => ({ nome, pessoas: [], gastos: [], caixa: [], acertos: [] });
 // Todas as viagens ficam em STORE; a versão antiga (uma viagem só em KEY) vira "Minha viagem".
-let store = JSON.parse(localStorage.getItem(STORE) || 'null');
+// Tira < > " de todo texto salvo: as telas montam HTML com esses textos (evita injeção de código).
+const limpo = obj => JSON.parse(JSON.stringify(obj, (k, v) => typeof v === 'string' ? v.replace(/[<>"]/g, '') : v));
+let store = limpo(JSON.parse(localStorage.getItem(STORE) || 'null'));
 if (!store) {
   const antigo = JSON.parse(localStorage.getItem(KEY) || 'null');
   store = { atual: 'v1', viagens: { v1: { ...viagemVazia('Minha viagem'), ...antigo } } };
@@ -233,7 +241,10 @@ let editGasto = null, editCaixa = null;
 
 const $ = id => document.getElementById(id);
 const brl = c => (c / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-const cents = v => Math.round(parseFloat(String(v).replace(',', '.')) * 100);
+// Campos de valor guardam o texto formatado ("1.234,56"); os dígitos já são os centavos.
+const cents = v => parseInt(String(v).replace(/\D/g, ''), 10) || 0;
+const MAXV = 100000000; // R$ 1.000.000,00
+const fmtV = c => (c / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const hoje = () => new Date().toLocaleDateString('sv'); // AAAA-MM-DD no fuso local
 const dataBR = d => d.split('-').reverse().join('/');
 // Campo de calendário já vem em AAAA-MM-DD; vazio vira hoje.
@@ -244,7 +255,9 @@ const nome = id => id === CAIXA ? 'Caixinha Pix' : (db.pessoas.find(p => p.id ==
 const ini = n => n.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const porData = (a, b) => b.data.localeCompare(a.data);
-const salvar = () => { localStorage.setItem(STORE, JSON.stringify(store)); render(); };
+const salvar = () => { store = limpo(store); db = store.viagens[store.atual]; localStorage.setItem(STORE, JSON.stringify(store)); render(); enviar(); };
+const saldoCaixa = (ignorar) => db.caixa.reduce((t, c) => t + (c.tipo === 'aporte' ? c.valor : -c.valor), 0)
+  - db.gastos.filter(g => g.pagou === CAIXA && g.id !== ignorar).reduce((t, g) => t + g.valor, 0);
 // Categorias valem para todas as viagens. "Outros" é fixa: recebe os gastos de categorias apagadas.
 const OUTROS = 'Outros';
 const CORES = ['#0E7490', '#22C55E', '#38BDF8', '#F59E0B', '#EC4899', '#8B5CF6', '#EF4444', '#84CC16'];
@@ -301,12 +314,12 @@ const linhaGasto = (g, acoes) => `<div class="item">${av(ini(nome(g.pagou)))}
 
 function renderPart(marcados) {
   $('g-part').innerHTML = db.pessoas.map(p =>
-    `<label><input type="checkbox" value="${p.id}" ${marcados && marcados.includes(p.id) ? 'checked' : ''}>${p.nome}</label>`).join('') || '<span class="empty">Cadastre pessoas primeiro</span>';
+    `<label><input type="checkbox" value="${p.id}" ${!marcados || marcados.includes(p.id) ? 'checked' : ''}>${p.nome}</label>`).join('') || '<span class="empty">Cadastre pessoas primeiro</span>';
 }
 
 function renderVals(vals) {
   $('g-vals').innerHTML = db.pessoas.map(p => `<div class="vrow"><span>${p.nome}</span>
-    <input type="number" step="0.01" inputmode="decimal" placeholder="R$ 0,00" data-id="${p.id}" value="${vals && vals[p.id] ? (vals[p.id] / 100).toFixed(2) : ''}" oninput="falta()"></div>`).join('');
+    <input type="text" inputmode="numeric" data-money placeholder="0,00" data-id="${p.id}" value="${vals && vals[p.id] ? fmtV(vals[p.id]) : ''}" oninput="falta()"></div>`).join('');
   falta();
 }
 
@@ -334,7 +347,7 @@ function render() {
   ['g-pagou', 'a-de', 'a-para'].forEach(id => {
     const v = $(id).value;
     $(id).innerHTML = opts + (id === 'g-pagou' ? `<option value="${CAIXA}">Caixinha Pix</option>` : '');
-    if (v) $(id).value = v;
+    if (v && v !== CAIXA) $(id).value = v; // caixinha só se escolhida na hora, nunca como padrão
   });
   if (!editGasto) { renderPart(); renderVals(); }
   mostrarPart();
@@ -344,7 +357,7 @@ function render() {
   // Movimentações antigas do tipo "gasto" + gastos pagos com a caixinha.
   const movCaixa = db.caixa.concat(db.gastos.filter(g => g.pagou === CAIXA).map(g => ({ ...g, tipo: 'gasto', doGasto: true })));
   const aportes = db.caixa.filter(c => c.tipo === 'aporte').reduce((t, c) => t + c.valor, 0);
-  const cx = movCaixa.reduce((t, c) => t + (c.tipo === 'aporte' ? c.valor : -c.valor), 0);
+  const cx = saldoCaixa();
   $('cx-saldo').textContent = brl(cx);
   $('r-total').textContent = brl(total);
   $('r-caixa').textContent = brl(cx);
@@ -377,8 +390,8 @@ function render() {
 
   $('lista-viagens').innerHTML = Object.entries(store.viagens).map(([id, v]) => `<div class="item">
     <div class="t" onclick="trocarViagem('${id}')" style="cursor:pointer"><b>${v.nome} ${id === store.atual ? '<span class="badge g">atual</span>' : ''}</b>
-    <span>${v.pessoas.length} pessoas · ${brl(v.gastos.filter(g => g.pagou !== CAIXA).reduce((t, g) => t + g.valor, 0))}</span></div>
-    <div class="acts">${btnEdit(`renomearViagem('${id}')`)}${btnDel(`delViagem('${id}')`)}</div></div>`).join('');
+    <span>${v.cod ? `Código ${v.cod} · ` : ''}${v.pessoas.length} pessoas · ${brl(v.gastos.filter(g => g.pagou !== CAIXA).reduce((t, g) => t + g.valor, 0))}</span></div>
+    <div class="acts">${v.cod ? `<button class="icon-btn" onclick="compartilharCod('${v.cod}')" aria-label="Compartilhar código"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></button>` : ''}${btnEdit(`renomearViagem('${id}')`)}${btnDel(`delViagem('${id}')`)}</div></div>`).join('');
   $('cx-info').textContent = `Entrou ${brl(aportes)} · gasto ${brl(aportes - cx)}`;
 
   $('saldos').innerHTML = db.pessoas.map(p => `<div class="item">${av(ini(p.nome), s[p.id] > 0)}
@@ -473,6 +486,7 @@ const mascote = (pose, tam) => `<svg viewBox="0 0 200 200" width="${tam}" height
 function addPessoa() {
   const n = $('p-nome').value.trim();
   if (!n) return $('p-nome').focus();
+  if (db.pessoas.some(p => p.nome.toLowerCase() === n.toLowerCase())) return alert('Essa pessoa já está no grupo.');
   db.pessoas.push({ id: uid(), nome: n });
   $('p-nome').value = '';
   salvar();
@@ -499,6 +513,8 @@ function salvarGasto() {
     return alert('Preencha descrição, valor, quem pagou e ao menos uma pessoa.');
   if (porValor && Object.values(vals).reduce((t, v) => t + v, 0) !== valor)
     return alert('A soma dos valores de cada pessoa precisa ser igual ao total do gasto.');
+  if (pagaCaixa && valor > saldoCaixa(editGasto))
+    return alert(`A caixinha só tem ${brl(saldoCaixa(editGasto))}. Adicione dinheiro nela antes.`);
   const data = lerData('g-data');
   if (!data) return;
   const cat = (document.querySelector('input[name=gcat]:checked') || { value: 'Outros' }).value;
@@ -506,6 +522,7 @@ function salvarGasto() {
   if (vals) g.vals = vals;
   if (editGasto) db.gastos = db.gastos.map(x => x.id === editGasto ? g : x);
   else db.gastos.push(g);
+  avisar(editGasto ? 'Gasto atualizado' : 'Gasto concluído');
   limparGasto();
   salvar();
 }
@@ -513,7 +530,7 @@ function salvarGasto() {
 function editarGasto(id) {
   const g = db.gastos.find(x => x.id === id);
   editGasto = id;
-  $('g-desc').value = g.desc; $('g-valor').value = (g.valor / 100).toFixed(2); $('g-data').value = g.data; $('g-pagou').value = g.pagou;
+  $('g-desc').value = g.desc; $('g-valor').value = fmtV(g.valor); $('g-data').value = g.data; $('g-pagou').value = g.pagou;
   document.querySelector(`input[name=gmodo][value=${g.vals ? 'valor' : 'igual'}]`).checked = true;
   document.querySelector(`input[name=gcat][value="${g.cat || 'Outros'}"]`).checked = true;
   renderPart(g.part);
@@ -545,6 +562,7 @@ function salvarCaixa() {
   const c = { id: editCaixa || uid(), tipo, desc, valor, data };
   if (editCaixa) db.caixa = db.caixa.map(x => x.id === editCaixa ? c : x);
   else db.caixa.push(c);
+  avisar(editCaixa ? 'Alterações salvas' : 'Valor adicionado');
   limparCaixa();
   salvar();
 }
@@ -552,7 +570,7 @@ function salvarCaixa() {
 function editarCaixa(id) {
   const c = db.caixa.find(x => x.id === id);
   editCaixa = id;
-  $('c-desc').value = c.desc; $('c-valor').value = (c.valor / 100).toFixed(2); $('c-data').value = c.data;
+  $('c-desc').value = c.desc; $('c-valor').value = fmtV(c.valor); $('c-data').value = c.data;
   modoEdicao('c', true, 'Editar movimentação', 'Salvar alterações');
 }
 
@@ -578,12 +596,14 @@ function addAcerto() {
   db.acertos.push({ id: uid(), de, para, valor, data });
   $('a-valor').value = '';
   salvar();
+  avisar('Acerto registrado');
 }
 
 function quitar(de, para, valor) {
   if (!confirm(`Registrar que ${nome(de)} pagou ${brl(valor)} para ${nome(para)}?`)) return;
   db.acertos.push({ id: uid(), de, para, valor, data: hoje() });
   salvar();
+  avisar('Conta quitada');
 }
 
 function del(lista, id) {
@@ -608,6 +628,7 @@ function compartilhar() {
 function setTema(t) {
   document.documentElement.dataset.theme = t;
   localStorage.setItem('rachai-tema', t);
+  $('tema-sw').setAttribute('aria-checked', t === 'dark');
   document.querySelector('meta[name=theme-color]').content = t === 'dark' ? '#010812' : '#082F49';
 }
 
@@ -691,19 +712,95 @@ function delViagem(id) {
   else salvar();
 }
 
+// Sincronização com o Supabase: cada viagem tem um código; quem tem o código vê e edita a mesma viagem.
+// shortcut: a última gravação vence; se os dois editarem no mesmo minuto, um pode perder a alteração.
+const SB = 'https://rclclrjxvdxcoqcvridt.supabase.co/rest/v1/rpc/';
+const SB_KEY = 'sb_publishable_J_83tpqeyihcxoc8UqT1FQ_VE8L-R2e'; // publishable key (Project Settings -> API Keys), pública por natureza
+const rpc = (fn, body) => fetch(SB + fn, { method: 'POST', body: JSON.stringify(body),
+  headers: { apikey: SB_KEY, 'Content-Type': 'application/json' } })
+  .then(r => { if (!r.ok) throw r; return r.status === 204 ? null : r.json(); });
+const novoCod = () => Array.from(crypto.getRandomValues(new Uint8Array(8)), b => 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'[b % 31]).join('');
+// Viagens com alteração ainda não enviada (sem internet, por exemplo).
+const pend = new Set(JSON.parse(localStorage.getItem('rachai-pend') || '[]'));
+const guardaPend = () => localStorage.setItem('rachai-pend', JSON.stringify([...pend]));
+let envioT;
+function enviar() {
+  if (!SB_KEY) return;
+  if (!db.cod) { db.cod = novoCod(); localStorage.setItem(STORE, JSON.stringify(store)); }
+  pend.add(store.atual); guardaPend();
+  clearTimeout(envioT);
+  envioT = setTimeout(enviarPend, 800);
+}
+function enviarPend() {
+  return Promise.all([...pend].map(id => {
+    const v = store.viagens[id];
+    if (!v) return pend.delete(id);
+    const { cod, ...dados } = v;
+    return rpc('put_viagem', { p_cod: cod, p_dados: dados }).then(() => pend.delete(id)).catch(() => {});
+  })).then(guardaPend);
+}
+// Busca a versão do servidor das viagens compartilhadas (só as que não têm envio pendente).
+function puxar() {
+  if (!SB_KEY || document.hidden) return;
+  enviarPend().then(() => Promise.all(Object.entries(store.viagens).filter(([id, v]) => v.cod && !pend.has(id)).map(([id, v]) =>
+    rpc('get_viagem', { p_cod: v.cod }).then(d => {
+      if (d && JSON.stringify({ ...d, cod: v.cod }) !== JSON.stringify(v)) store.viagens[id] = limpo({ ...viagemVazia(v.nome), ...d, cod: v.cod });
+    }).catch(() => {})))).then(() => {
+    store = limpo(store); db = store.viagens[store.atual];
+    localStorage.setItem(STORE, JSON.stringify(store));
+    if (!editGasto && !editCaixa) render();
+  });
+}
+function entrarViagem() {
+  const cod = $('v-cod').value.trim().toUpperCase();
+  if (!cod) return $('v-cod').focus();
+  if (!SB_KEY) return alert('Sincronização ainda não configurada.');
+  const ja = Object.entries(store.viagens).find(([, v]) => v.cod === cod);
+  if (ja) return trocarViagem(ja[0]);
+  rpc('get_viagem', { p_cod: cod }).then(d => {
+    if (!d) return alert('Nenhuma viagem com esse código.');
+    const id = uid();
+    store.viagens[id] = { ...viagemVazia('Viagem'), ...d, cod };
+    $('v-cod').value = '';
+    trocarViagem(id);
+    avisar('Você entrou na viagem');
+  }).catch(() => alert('Sem conexão. Tente de novo.'));
+}
+function compartilharCod(cod) {
+  const txt = `Entre na viagem no Rachaí com o código ${cod}
+https://matheuscorradii.github.io/App_Financeiro_Viagem/`;
+  if (navigator.share) navigator.share({ text: txt }).catch(() => {});
+  else navigator.clipboard.writeText(cod).then(() => avisar('Código copiado'));
+}
+document.addEventListener('visibilitychange', puxar);
+setInterval(puxar, 20000);
+
 document.querySelectorAll('nav button[data-t]').forEach(b => b.onclick = () => ir(b.dataset.t));
 
 ['g-data', 'c-data', 'a-data'].forEach(id => $(id).value = hoje());
-// Ao sair de um campo de valor, mostra sempre 2 casas decimais (100 -> 100.00).
-document.addEventListener('blur', e => {
+// Campo de valor preenche pelos centavos (5 -> 0,05 -> 0,55 -> 5,51) e trava em R$ 1 milhão.
+document.addEventListener('input', e => {
   const el = e.target;
-  if (el.type === 'number' && el.value) el.value = (cents(el.value) / 100).toFixed(2);
+  if (!('money' in el.dataset)) return;
+  const c = Math.min(cents(el.value), MAXV);
+  el.value = c ? fmtV(c) : '';
 }, true);
 
+// Aviso rápido de confirmação depois de concluir uma ação.
+let toastT;
+function avisar(msg, erro) {
+  $('toast').textContent = (erro ? '⚠ ' : '✓ ') + msg;
+  $('toast').classList.add('on');
+  clearTimeout(toastT);
+  toastT = setTimeout(() => $('toast').classList.remove('on'), erro ? 3500 : 1800);
+}
+// Avisos de erro aparecem no próprio app (alert nativo é bloqueado em alguns navegadores).
+function alert(msg) { avisar(msg, true); }
+
 setTema(document.documentElement.dataset.theme);
-document.querySelector(`input[name=tema][value=${document.documentElement.dataset.theme}]`).checked = true;
 salvar();
 passoSplash();
+puxar();
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 </script>
