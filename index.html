@@ -10,7 +10,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Urbanist:wght@500;700&family=Nunito:wght@400;600;700&display=swap">
 <link rel="stylesheet" href="style.css">
-<script>document.documentElement.dataset.theme = localStorage.getItem('rachai-tema') || 'light';</script>
+<script>document.documentElement.dataset.theme = localStorage.getItem('rachai-tema') || 'light';
+// Tela de carregamento só uma vez por sessão: volta quando o app é fechado de vez ou o cache é limpo.
+try { if (sessionStorage.getItem('rachai-sp')) document.documentElement.classList.add('sem-splash'); } catch (e) {}</script>
 </head>
 <body>
 
@@ -23,6 +25,12 @@
     <div class="sp-dots" id="sp-dots"></div>
   </div>
 </div>
+
+<div id="tut" class="hide"><div class="tut-box">
+  <div id="tut-mascote"></div>
+  <div class="tut-fala"><p id="tut-msg"></p><div class="sp-dots" id="tut-dots"></div>
+    <div class="tut-btns"><button class="btn outline sm" id="tut-sair" onclick="fimTutorial()">Pular</button><button class="btn sm" id="tut-prox"></button></div></div>
+</div></div>
 
 <!-- Barra fixa do topo (celular) -->
 <header class="appbar"><div class="wrap">
@@ -51,6 +59,7 @@
     <button class="btn ghost sm" onclick="compartilhar()">Enviar no WhatsApp</button></div></div></div>
   <div class="wrap">
     <div class="stats float">
+      <div class="stat cod hide" id="r-cod"></div>
       <div class="stat"><div class="k">Total dividido</div><div class="v" id="r-total"></div></div>
       <div class="stat"><div class="k">Saldo da caixinha</div><div class="v" id="r-caixa"></div></div>
     </div>
@@ -141,13 +150,17 @@
 <section class="tab" id="t-viagens">
   <div class="hero small"><div class="wrap"><h1>Viagens</h1></div></div>
   <div class="wrap">
-    <div class="search" style="margin-top:16px">
+    <h3>Viagem atual</h3><div class="card pad" id="v-atual"></div>
+    <h3>Entrar numa viagem</h3>
+    <p class="hint">Recebeu um código? Digite aqui para ver e editar a mesma viagem.</p>
+    <div class="search">
+      <div class="field"><input id="v-cod" placeholder="Código (ex.: K7P2XQ9M)" style="padding-left:14px;text-transform:uppercase" onkeydown="if(event.key==='Enter')entrarViagem()"></div>
+      <button class="round" onclick="entrarViagem()" aria-label="Entrar na viagem"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+    </div>
+    <h3>Nova viagem</h3>
+    <div class="search">
       <div class="field"><input id="v-nome" placeholder="Nome da nova viagem" style="padding-left:14px" onkeydown="if(event.key==='Enter')novaViagem()"></div>
       <button class="round" onclick="novaViagem()" aria-label="Nova viagem"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
-    </div>
-    <div class="search">
-      <div class="field"><input id="v-cod" placeholder="Entrar com código (ex.: K7P2XQ9M)" style="padding-left:14px;text-transform:uppercase" onkeydown="if(event.key==='Enter')entrarViagem()"></div>
-      <button class="round" onclick="entrarViagem()" aria-label="Entrar na viagem"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
     </div>
     <h3>Minhas viagens</h3><div class="card" id="lista-viagens"></div>
   </div>
@@ -193,6 +206,8 @@
         </button>
       </div>
     </div>
+    <h3>Ajuda</h3>
+    <div class="card"><div class="item" onclick="tutorial(0)" style="cursor:pointer"><div class="t"><b>Ver tutorial</b><span>O Carteirinha mostra cada tela do app</span></div><span class="chev">›</span></div></div>
     <h3>Organização</h3>
     <div class="card">
       <div class="item" onclick="ir('viagens')" style="cursor:pointer"><div class="t"><b>Viagens</b><span>Criar, trocar e renomear viagens</span></div><span class="chev">›</span></div>
@@ -388,9 +403,19 @@ function render() {
       <em>${Math.round(porCat[c] / totCat * 100)}%</em><b>${brl(porCat[c])}</b></div>`).join('')}</div>`
     : vazio('Nenhum gasto');
 
+  // Código da viagem em destaque: no Início e no topo da tela de Viagens.
+  $('r-cod').classList.toggle('hide', !db.cod);
+  // Código fica oculto por padrão (o olho mostra/esconde) para quem está do lado não ver.
+  const codTxt = verCod ? db.cod : '••••••••';
+  const olho = `<button class="icon-btn" onclick="verCod = !verCod; render()" aria-label="${verCod ? 'Ocultar' : 'Mostrar'} código"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>${verCod ? '<path d="M3 3l18 18"/>' : ''}</svg></button>`;
+  if (db.cod) $('r-cod').innerHTML = `<div><div class="k">Código da viagem</div><div class="v">${codTxt} ${olho}</div></div>
+    <button class="btn sm" onclick="compartilharCod('${db.cod}')">Compartilhar</button>`;
+  $('v-atual').innerHTML = `<b>${db.nome}</b><span class="hint">${db.cod ? 'Envie este código para quem vai dividir com você:' : 'Sem conexão: o código aparece quando a viagem for salva online.'}</span>
+    ${db.cod ? `<div class="cod-big">${codTxt} ${olho}</div><div class="row2"><button class="btn" onclick="compartilharCod('${db.cod}')">Compartilhar</button>
+    <button class="btn ghost" onclick="navigator.clipboard.writeText('${db.cod}').then(() => avisar('Código copiado'))">Copiar</button></div>` : ''}`;
   $('lista-viagens').innerHTML = Object.entries(store.viagens).map(([id, v]) => `<div class="item">
     <div class="t" onclick="trocarViagem('${id}')" style="cursor:pointer"><b>${v.nome} ${id === store.atual ? '<span class="badge g">atual</span>' : ''}</b>
-    <span>${v.cod ? `Código ${v.cod} · ` : ''}${v.pessoas.length} pessoas · ${brl(v.gastos.filter(g => g.pagou !== CAIXA).reduce((t, g) => t + g.valor, 0))}</span></div>
+    <span>${v.pessoas.length} pessoas · ${brl(v.gastos.filter(g => g.pagou !== CAIXA).reduce((t, g) => t + g.valor, 0))}</span></div>
     <div class="acts">${v.cod ? `<button class="icon-btn" onclick="compartilharCod('${v.cod}')" aria-label="Compartilhar código"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></button>` : ''}${btnEdit(`renomearViagem('${id}')`)}${btnDel(`delViagem('${id}')`)}</div></div>`).join('');
   $('cx-info').textContent = `Entrou ${brl(aportes)} · gasto ${brl(aportes - cx)}`;
 
@@ -440,7 +465,6 @@ function ir(tab, alvo) {
 function novoGasto() {
   ir('gastos');
   limparGasto();
-  setTimeout(() => $('g-valor').focus(), 100);
 }
 
 // Personagem do Rachaí: mesma carteira do logo, com expressões diferentes.
@@ -479,6 +503,44 @@ function fecharSplash() {
   if (!el) return;
   el.classList.add('out');
   setTimeout(() => el.remove(), 400);
+  convidarTutorial();
+}
+
+// Tutorial: o Carteirinha passa por cada tela explicando. Na primeira vez ele só convida.
+const PASSOS = [
+  ['resumo', 'feliz', 'Oi! Eu sou o Carteirinha. Aqui no Início você vê o total, o saldo de cada um e quem deve a quem.'],
+  ['pessoas', 'pensativa', 'Primeiro, cadastre aqui em Pessoas quem está na viagem.'],
+  ['gastos', 'feliz', 'Toque no + verde para lançar um gasto: valor, quem pagou e entre quem dividir, igual ou por valor.'],
+  ['acerto', 'preocupada', 'Em Acerto eu mostro quem deve a quem. Quando alguém pagar, é só tocar em Quitar.'],
+  ['caixa', 'pensativa', 'A Caixinha guarda um valor pago em grupo, tipo um Pix para a comida. Ela fica fora da divisão.'],
+  ['viagens', 'feliz', 'Em Viagens você cria outras viagens e compartilha o código para dividir com quem está longe.'],
+  ['ajustes', 'comemorando', 'Nos Ajustes ficam o tema escuro, o backup e este tutorial. Pronto, bora rachar!']
+];
+function falaTut(pose, msg, dots) {
+  $('tut').classList.remove('hide');
+  $('tut-mascote').innerHTML = mascote(pose, 96);
+  $('tut-msg').innerHTML = `<span>${msg}</span>`;
+  $('tut-dots').innerHTML = dots;
+}
+function convidarTutorial() {
+  if (localStorage.getItem('rachai-tut')) return;
+  falaTut('feliz', 'Oi! Eu sou o Carteirinha. Quer que eu te mostre como o app funciona?', '');
+  $('tut-sair').textContent = 'Agora não';
+  $('tut-prox').textContent = 'Ver tutorial';
+  $('tut-prox').onclick = () => tutorial(0);
+}
+function tutorial(i) {
+  if (i === PASSOS.length) return fimTutorial();
+  const [tab, pose, msg] = PASSOS[i];
+  ir(tab);
+  falaTut(pose, msg, PASSOS.map((_, j) => `<i class="${j <= i ? 'on' : ''}"></i>`).join(''));
+  $('tut-sair').textContent = 'Pular';
+  $('tut-prox').textContent = i === PASSOS.length - 1 ? 'Concluir' : 'Próximo';
+  $('tut-prox').onclick = () => tutorial(i + 1);
+}
+function fimTutorial() {
+  localStorage.setItem('rachai-tut', '1');
+  $('tut').classList.add('hide');
 }
 
 const mascote = (pose, tam) => `<svg viewBox="0 0 200 200" width="${tam}" height="${tam}" aria-hidden="true">${CORPO}${POSES[pose]}${PES}</svg>`;
@@ -751,8 +813,9 @@ function puxar() {
     if (!editGasto && !editCaixa) render();
   });
 }
-function entrarViagem() {
-  const cod = $('v-cod').value.trim().toUpperCase();
+let verCod = false;
+function entrarViagem(link) {
+  const cod = (link || $('v-cod').value).trim().toUpperCase();
   if (!cod) return $('v-cod').focus();
   if (!SB_KEY) return alert('Sincronização ainda não configurada.');
   const ja = Object.entries(store.viagens).find(([, v]) => v.cod === cod);
@@ -767,10 +830,8 @@ function entrarViagem() {
   }).catch(() => alert('Sem conexão. Tente de novo.'));
 }
 function compartilharCod(cod) {
-  const txt = `Entre na viagem no Rachaí com o código ${cod}
-https://matheuscorradii.github.io/App_Financeiro_Viagem/`;
-  if (navigator.share) navigator.share({ text: txt }).catch(() => {});
-  else navigator.clipboard.writeText(cod).then(() => avisar('Código copiado'));
+  const txt = `Entre na viagem "${db.nome}" no Rachaí: https://matheuscorradii.github.io/App_Financeiro_Viagem/?entrar=${cod}`;
+  window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(txt));
 }
 document.addEventListener('visibilitychange', puxar);
 setInterval(puxar, 20000);
@@ -799,8 +860,12 @@ function alert(msg) { avisar(msg, true); }
 
 setTema(document.documentElement.dataset.theme);
 salvar();
-passoSplash();
+if (document.documentElement.classList.contains('sem-splash')) fecharSplash();
+else { try { sessionStorage.setItem('rachai-sp', '1'); } catch (e) {} passoSplash(); }
 puxar();
+// Link de convite (?entrar=CODIGO): entra na viagem e limpa o endereço.
+const convite = new URLSearchParams(location.search).get('entrar');
+if (convite) { history.replaceState(null, '', location.pathname); entrarViagem(convite); }
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 </script>

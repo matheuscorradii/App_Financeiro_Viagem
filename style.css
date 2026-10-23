@@ -217,3 +217,25 @@ input.valor { font-family: var(--display); font-size: 28px; font-weight: 700; }
 /* Aviso de confirmação */
 #toast { position: fixed; left: 50%; bottom: 96px; transform: translate(-50%, 20px); background: #22C55E; color: #082F49; font-weight: 700; padding: 10px 18px; border-radius: 99px; box-shadow: 0 6px 20px rgba(0,0,0,.2); opacity: 0; pointer-events: none; transition: .25s; z-index: 50; white-space: nowrap; }
 #toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+/* Código da viagem */
+.stat.cod { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.stat.cod .v { letter-spacing: .12em; }
+.hint { display: block; font-size: 13px; color: var(--muted); margin: 4px 0 10px; }
+.cod-big { font-family: var(--display); font-size: 30px; font-weight: 800; letter-spacing: .15em; text-align: center; padding: 14px; margin-bottom: 12px; border-radius: 16px; background: var(--soft); border: 2px dashed var(--line); }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.sem-splash #splash { display: none; }
+
+/* Tutorial com o Carteirinha */
+#tut { position: fixed; inset: 0; z-index: 90; background: rgba(2,11,22,.45); display: flex; align-items: flex-end; justify-content: center; padding: 16px 16px 104px; }
+.tut-box { display: flex; align-items: flex-end; gap: 6px; width: 100%; max-width: 460px; }
+#tut-mascote { flex: none; }
+#tut-mascote svg { animation: sp-pula .6s cubic-bezier(.34,1.56,.64,1) both; }
+.tut-fala { flex: 1; background: var(--card); color: var(--text, inherit); border-radius: 22px 22px 22px 6px; padding: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.25); margin-bottom: 40px; }
+#tut-msg { margin: 0; font-weight: 700; font-size: 15px; min-height: 44px; }
+#tut-msg span { display: block; animation: sp-texto .4s ease both; }
+.tut-fala .sp-dots { justify-content: flex-start; margin-top: 10px; }
+.tut-fala .sp-dots i { background: var(--line); }
+.tut-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+@media (min-width: 900px) { #tut { padding-bottom: 32px; } }
